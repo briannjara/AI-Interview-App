@@ -1,12 +1,7 @@
-import { ReactNode } from "react";
-import { redirect } from "next/navigation";
+import AuthForm from "@/components/AuthForm";
 
-
-
-const AuthLayout = async ({ children }: { children: ReactNode }) => {
-  
-
-  return <div className="auth-layout">{children}</div>;
+const Page = () => {
+  return <AuthForm type="sign-in" />;
 };
 
-export default AuthLayout;
+export default Page;
