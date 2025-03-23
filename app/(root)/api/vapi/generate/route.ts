@@ -5,9 +5,19 @@ import { db } from "@/firebase/admin";
 import { getRandomInterviewCover } from "@/lib/utils";
 
 export async function POST(request: Request) {
-  const { type, role, level, techstack, amount, userid } = await request.json();
-
   try {
+    const body = await request.json();
+    const { type, role, level, techstack, amount, userid } = body;
+
+    // 🔍 Validate required fields
+    if (!type || !role || !level || !techstack || !amount || !userid) {
+      return Response.json(
+        { success: false, error: "Missing required fields" },
+        { status: 400 }
+      );
+    }
+
+    // 🎯 Generate AI Interview Questions
     const { text: questions } = await generateText({
       model: google("gemini-2.0-flash-001"),
       prompt: `Prepare questions for a job interview.
@@ -25,27 +35,41 @@ export async function POST(request: Request) {
     `,
     });
 
+    // 🔎 Ensure AI response is valid
+    if (!questions) {
+      return Response.json(
+        { success: false, error: "AI response is empty or invalid" },
+        { status: 500 }
+      );
+    }
+
+    // 📌 Format Data for Firestore
     const interview = {
-      role: role,
-      type: type,
-      level: level,
-      techstack: techstack.split(","),
-      questions: JSON.parse(questions),
+      role,
+      type,
+      level,
+      techstack: techstack.split(","), // Convert string to array
+      questions: JSON.parse(questions), // Parse AI-generated questions
       userId: userid,
       finalized: true,
       coverImage: getRandomInterviewCover(),
       createdAt: new Date().toISOString(),
     };
 
+    // 🔥 Save interview to Firestore
     await db.collection("interviews").add(interview);
 
     return Response.json({ success: true }, { status: 200 });
   } catch (error) {
-    console.error("Error:", error);
-    return Response.json({ success: false, error: error }, { status: 500 });
+    console.error("❌ Error:", error);
+    return Response.json(
+      { success: false, error: error.message || "Internal Server Error" },
+      { status: 500 }
+    );
   }
 }
 
+// ✅ Simple GET Route
 export async function GET() {
   return Response.json({ success: true, data: "Thank you!" }, { status: 200 });
 }
